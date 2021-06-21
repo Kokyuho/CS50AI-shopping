@@ -1,7 +1,7 @@
 # CS50’s Introduction to Artificial Intelligence with Python
 # Project 4: Learning: Shopping Prediction
 
-Aim: Write an AI to predict whether online shopping customers will complete a purchase.
+**Aim**: Write an AI to predict whether online shopping customers will complete a purchase.
 
 Description: When users are shopping online, not all will end up purchasing something. 
 It might be useful, though, for a shopping website to be able to predict whether a user 
@@ -21,7 +21,7 @@ achieved. Our goal is to build a classifier that performs reasonably on both met
 
 See full description here: https://cs50.harvard.edu/ai/2020/projects/4/shopping/
 
-UPDATE 1: A *DecisionTreeClassifier* model was used, proving more useful for this 
+**UPDATE 1**: A *DecisionTreeClassifier* model was used, proving more useful for this 
 problem by getting better predictions while taking much shorter time to train. A sensitivity of 59% and 
 a specifity of 94% is achieved after fine tuning the model using Grid Search.
 
@@ -30,7 +30,7 @@ and theresults (models, variables) can be retrieved from the dict main_locals, e
 *main_locals['gs'].best_estimator_* to get the optimized model or *main_locals['sorted_scores'][:5]* 
 to see grid search scores.
 
-UPDATE 2: A *RandomForestClassifier* model was used to improve the results slightly further.
+**UPDATE 2**: A *RandomForestClassifier* model was used to improve the results slightly further.
 In this case, grid search does not seem to be able to improve the results anymore, so
 default parameters are used to obtain a sensitivity of 57% and a specifity of 96%. Since
 the test data is split at random, these results vary ever so slighly, but consistent
@@ -40,24 +40,24 @@ This model also provides a feature importance estimation, which is very useful i
 assesing which features are most relevant to predict the outcome. In this case, the
 most important features to predict a purchase are estimated as follows:
 
-Model estimated feature importances:
-PageValues              0.3982
-ProductRelated_Duration 0.0876
-ExitRates               0.0839
-ProductRelated          0.0712
-Administrative_Duration 0.0561
-BounceRates             0.0524
-Month                   0.0442
-Administrative          0.0426
-Region                  0.0303
-TrafficType             0.0296
-Informational_Duration  0.026
-Browser                 0.0191
-OperatingSystems        0.0172
-Informational           0.0168
-VisitorType             0.0113
-Weekend                 0.01
-SpecialDay              0.0035
+Model estimated feature importances:  
+PageValues              0.3982  
+ProductRelated_Duration 0.0876  
+ExitRates               0.0839  
+ProductRelated          0.0712  
+Administrative_Duration 0.0561  
+BounceRates             0.0524  
+Month                   0.0442  
+Administrative          0.0426  
+Region                  0.0303  
+TrafficType             0.0296  
+Informational_Duration  0.026  
+Browser                 0.0191  
+OperatingSystems        0.0172  
+Informational           0.0168  
+VisitorType             0.0113  
+Weekend                 0.01  
+SpecialDay              0.0035  
 
 PageValues, ExitRates and BounceRates are values calculated by Google Analytics. PageValues
 is clearly and by far the most important feature in this case. The page values of Google 
@@ -68,12 +68,12 @@ pages (user account,...), the month or even the region. Special days, os and bro
 type seem to be the least important in our predictions.
 
 
-Usage: Usage: python shopping.py data [model] [--options]
-              model: {knn, tree}, default='knn' where:
-              knn: k-nearest neighbors classifier
-              tree: decision tree classifier
-              forest: random forest classifier
-              Options:
+Usage: Usage: python shopping.py data [model] [--options]  
+              model: {knn, tree}, default='knn' where:  
+              knn: k-nearest neighbors classifier  
+              tree: decision tree classifier  
+              forest: random forest classifier  
+              Options:  
               --grid-search: activates grid search (will take longer)
 
 Example:
