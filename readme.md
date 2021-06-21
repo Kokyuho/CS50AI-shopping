@@ -40,6 +40,7 @@ This model also provides a feature importance estimation, which is very useful i
 assesing which features are most relevant to predict the outcome. In this case, the
 most important features to predict a purchase are estimated as follows:
 
+<pre>
 Model estimated feature importances:  
 PageValues              0.3982  
 ProductRelated_Duration 0.0876  
@@ -58,6 +59,7 @@ Informational           0.0168
 VisitorType             0.0113  
 Weekend                 0.01  
 SpecialDay              0.0035  
+</pre>
 
 PageValues, ExitRates and BounceRates are values calculated by Google Analytics. PageValues
 is clearly and by far the most important feature in this case. The page values of Google 
@@ -67,14 +69,15 @@ seem to be product related duration and pages, if the user spends also time on a
 pages (user account,...), the month or even the region. Special days, os and browser or visitor
 type seem to be the least important in our predictions.
 
-
-Usage: Usage: python shopping.py data [model] [--options]  
-              model: {knn, tree}, default='knn' where:  
-              knn: k-nearest neighbors classifier  
-              tree: decision tree classifier  
-              forest: random forest classifier  
-              Options:  
-              --grid-search: activates grid search (will take longer)
+<pre>
+**Usage**: python shopping.py data [model] [--options]  
+       model: {knn, tree}, default='knn' where:  
+       knn: k-nearest neighbors classifier  
+       tree: decision tree classifier  
+       forest: random forest classifier  
+       Options:  
+       --grid-search: activates grid search (will take longer)
+</pre>
 
 Example:
 ```
