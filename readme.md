@@ -69,14 +69,15 @@ seem to be product related duration and pages, if the user spends also time on a
 pages (user account,...), the month or even the region. Special days, os and browser or visitor
 type seem to be the least important in our predictions.
 
+Usage:
 <pre>
-**Usage**: python shopping.py data [model] [--options]  
-       model: {knn, tree}, default='knn' where:  
-       knn: k-nearest neighbors classifier  
-       tree: decision tree classifier  
-       forest: random forest classifier  
-       Options:  
-       --grid-search: activates grid search (will take longer)
+python shopping.py data [model] [--options]  
+model: {knn, tree}, default='knn' where:  
+knn: k-nearest neighbors classifier  
+tree: decision tree classifier  
+forest: random forest classifier  
+Options:  
+--grid-search: activates grid search (will take longer)
 </pre>
 
 Example:
