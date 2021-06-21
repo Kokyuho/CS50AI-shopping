@@ -1,18 +1,50 @@
 import csv
+from re import X
 import sys
 import calendar
+import numpy as np
 
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import GridSearchCV
 
 TEST_SIZE = 0.4
 
-
 def main():
 
-    # Check command-line arguments
-    if len(sys.argv) != 2:
-        sys.exit("Usage: python shopping.py data")
+    # Check command-line arguments for data (sys.argv[1])
+    if len(sys.argv) < 2:
+        sys.exit("Usage: python shopping.py data [model] [--options]\n"
+                  "model: {knn, tree}, default='knn' where:\n"
+                  "knn: k-nearest neighbors classifier\n"
+                  "tree: decision tree classifier\n"
+                  "Options:\n"
+                  "--grid-search: activates grid search (will take longer)")
+
+    # Check if model was given (sys.argv[2]), else use knn (K-nearest neighbors)
+    model = 'knn'
+    if len(sys.argv) > 2:
+        model = sys.argv[2]
+        if model in ('knn', 'tree'):
+            pass
+        else:
+            sys.exit("Usage: python shopping.py data [model] [--options]\n"
+                     "model: {knn, tree}, default='knn' where:\n"
+                     "knn: k-nearest neighbors classifier\n"
+                     "tree: decision tree classifier\n"
+                     "Options:\n"
+                     "--grid-search: activates grid search (will take longer)")
+
+    # Check command line arguments to see if option --grid-search was given
+    if len(sys.argv) > 2:
+        for argv in sys.argv:
+            if argv == '--grid-search':
+                _grid_search = True
+            else:
+                _grid_search = False
 
     # Load data from spreadsheet and split into train and test sets
     evidence, labels = load_data(sys.argv[1])
@@ -20,16 +52,50 @@ def main():
         evidence, labels, test_size=TEST_SIZE
     )
 
-    # Train model and make predictions
-    model = train_model(X_train, y_train)
+    # Create transformation pipeline
+    pipe = Pipeline([
+        ('std_scaler', StandardScaler()),
+    ])
+
+    # Train chosen model with dafault parameters
+    model = train_model(X_train, y_train, model, pipe)
+
+    # Make predictions on test data and evaluate results
     predictions = model.predict(X_test)
     sensitivity, specificity = evaluate(y_test, predictions)
 
     # Print results
+    print(f"Results for chosen model ({model[-1].__class__()}) with default parameters:")
     print(f"Correct: {(y_test == predictions).sum()}")
     print(f"Incorrect: {(y_test != predictions).sum()}")
     print(f"True Positive Rate: {100 * sensitivity:.2f}%")
-    print(f"True Negative Rate: {100 * specificity:.2f}%")
+    print(f"True Negative Rate: {100 * specificity:.2f}%\n")
+
+    # Run grid search to optimize model if selected
+    if _grid_search:
+        print("Now running grid search optimization...")
+        gs = grid_search(model, X_train, y_train)
+        model_gs = gs.best_estimator_
+    
+        # Make predictions on test data and evaluate results
+        predictions = model_gs.predict(X_test)
+        sensitivity, specificity = evaluate(y_test, predictions)
+
+        # Print results
+        print(f"Results for chosen model ({model[-1].__class__()}) after grid search optimization:")
+        print(f"Correct: {(y_test == predictions).sum()}")
+        print(f"Incorrect: {(y_test != predictions).sum()}")
+        print(f"True Positive Rate: {100 * sensitivity:.2f}%")
+        print(f"True Negative Rate: {100 * specificity:.2f}%\n")
+
+        # Sort and store grid search scores
+        scores = []
+        cvres = gs.cv_results_
+        for mean_score, params in zip(cvres["mean_test_score"], cvres["params"]):
+            scores.append((np.sqrt(-mean_score), params))
+        sorted_scores = sorted(scores, key=lambda score: score[0])
+
+    return locals()
 
 
 def load_data(filename):
@@ -99,13 +165,41 @@ def load_data(filename):
         return (evidence, labels)
 
 
-def train_model(evidence, labels):
+def train_model(evidence, labels, model, pipe):
     """
     Given a list of evidence lists and a list of labels, return a
     fitted k-nearest neighbor model (k=1) trained on the data.
     """
-    neigh = KNeighborsClassifier(n_neighbors=1)
-    model = neigh.fit(evidence, labels)
+    if model == 'knn':
+        pipe.steps.append(
+            ('knn', KNeighborsClassifier(n_neighbors=1, 
+                                         weights='uniform', 
+                                         algorithm='auto', 
+                                         leaf_size=30, 
+                                         p=2, 
+                                         metric='minkowski', 
+                                         metric_params=None, 
+                                         n_jobs=None, 
+                                         ))
+        )
+
+    elif model == 'tree':
+        pipe.steps.append(
+            ('tree', DecisionTreeClassifier(criterion='gini', 
+                                           splitter='best', 
+                                           max_depth=None, 
+                                           min_samples_split=2, 
+                                           min_samples_leaf=1, 
+                                           min_weight_fraction_leaf=0.0, 
+                                           max_features=None, 
+                                           random_state=None, 
+                                           max_leaf_nodes=None, 
+                                           min_impurity_decrease=0.0, 
+                                           class_weight=None, 
+                                           ccp_alpha=0.0))
+        )
+     
+    model = pipe.fit(evidence, labels)
     return model
 
 
@@ -146,6 +240,43 @@ def evaluate(labels, predictions):
 
     return (sensitivity, specifity)
 
+def grid_search(pipe, X_train, y_train):
+    """
+    Takes as input the estimator (i.e. the model pipeline) and X_train data and 
+    y_train labels. Returns the optimized model.
+    """
+    if type(pipe[-1]) is KNeighborsClassifier:
+        param_grid = [
+            dict(std_scaler=['passthrough', StandardScaler()],
+                 knn__n_neighbors=[1, 5, 10],
+                 knn__weights=['uniform', 'distance'],
+                 knn__algorithm=['auto', 'ball_tree', 'kd_tree', 'brute'],
+                 knn__p=[1, 2]),
+        ]
+
+    elif type(pipe[-1]) is DecisionTreeClassifier:
+        param_grid = [
+            dict(std_scaler=['passthrough', StandardScaler()],
+                 tree__criterion=['gini', 'entropy'], 
+                 tree__max_depth=[3, 5, 10],
+                 tree__min_samples_split=[2, 5, 10],
+                 tree__min_samples_leaf=[5, 10, 15]),
+        ]
+    
+    grid_search = GridSearchCV(pipe, 
+                               param_grid, 
+                               scoring='neg_mean_squared_error', #default=None
+                               n_jobs=-1, # can be set to -1 for parallel processing
+                               refit=True, 
+                               cv=None, # Default 5-fold cross-validation, 
+                               verbose=1,
+                               pre_dispatch='2*n_jobs', 
+                               return_train_score=False)
+
+    grid_search.fit(X_train, y_train)
+
+    return grid_search
 
 if __name__ == "__main__":
-    main()
+    main_locals = main()
+    # model, X_train, X_test, y_train, y_test = main()
