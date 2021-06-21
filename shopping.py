@@ -7,6 +7,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import GridSearchCV
@@ -21,6 +22,7 @@ def main():
                   "model: {knn, tree}, default='knn' where:\n"
                   "knn: k-nearest neighbors classifier\n"
                   "tree: decision tree classifier\n"
+                  "forest: random forest classifier\n"
                   "Options:\n"
                   "--grid-search: activates grid search (will take longer)")
 
@@ -28,13 +30,14 @@ def main():
     model = 'knn'
     if len(sys.argv) > 2:
         model = sys.argv[2]
-        if model in ('knn', 'tree'):
+        if model in ('knn', 'tree', 'forest'):
             pass
         else:
             sys.exit("Usage: python shopping.py data [model] [--options]\n"
                      "model: {knn, tree}, default='knn' where:\n"
                      "knn: k-nearest neighbors classifier\n"
                      "tree: decision tree classifier\n"
+                     "forest: random forest classifier\n"
                      "Options:\n"
                      "--grid-search: activates grid search (will take longer)")
 
@@ -94,6 +97,30 @@ def main():
         for mean_score, params in zip(cvres["mean_test_score"], cvres["params"]):
             scores.append((np.sqrt(-mean_score), params))
         sorted_scores = sorted(scores, key=lambda score: score[0])
+
+    # If model is forest, process and store feature_importances_ estimation
+    if type(model[-1]) is RandomForestClassifier:
+
+        # Read headers
+        with open(sys.argv[1]) as csvfile:
+            reader = csv.reader(csvfile)
+            for row in reader:
+                headers = row
+                break
+        
+        # Get feature importances values array
+        importances = model[-1].feature_importances_
+
+        # Zip and sort
+        feature_importances = list(zip(headers, importances))
+        feature_importances = sorted(feature_importances, 
+                                     key= lambda feature: feature[1],
+                                     reverse=True)
+
+        # Print feature importances
+        print("Model estimated feature importances:")
+        for name, value in feature_importances:
+            print("{:<24}{}".format(name, round(value,4)))
 
     return locals()
 
@@ -198,6 +225,29 @@ def train_model(evidence, labels, model, pipe):
                                            class_weight=None, 
                                            ccp_alpha=0.0))
         )
+
+    elif model == 'forest':
+        pipe.steps.append(
+            ('forest', RandomForestClassifier(n_estimators=100,
+                                              criterion='gini',
+                                              max_depth=None,
+                                              min_samples_split=2,
+                                              min_samples_leaf=1,
+                                              min_weight_fraction_leaf=0.0,
+                                              max_features='auto',
+                                              max_leaf_nodes=None,
+                                              min_impurity_decrease=0.0,
+                                              min_impurity_split=None,
+                                              bootstrap=True,
+                                              oob_score=False,
+                                              n_jobs=-1,
+                                              random_state=None,
+                                              verbose=0,
+                                              warm_start=False,
+                                              class_weight=None,
+                                              ccp_alpha=0.0,
+                                              max_samples=None))
+        )
      
     model = pipe.fit(evidence, labels)
     return model
@@ -261,6 +311,18 @@ def grid_search(pipe, X_train, y_train):
                  tree__max_depth=[3, 5, 10],
                  tree__min_samples_split=[2, 5, 10],
                  tree__min_samples_leaf=[5, 10, 15]),
+        ]
+
+    elif type(pipe[-1]) is RandomForestClassifier:
+        param_grid = [
+            dict(std_scaler=['passthrough', StandardScaler()],
+                 forest__n_estimators=[50, 100, 200],
+                 forest__criterion=['gini', 'entropy'], 
+                 forest__max_depth=[5, 10, None],
+                 forest__min_samples_leaf=[1, 5, 10],
+                 forest__max_features=['auto', 'sqrt'],
+                 forest__bootstrap=[True, False],
+                 ),
         ]
     
     grid_search = GridSearchCV(pipe, 
